@@ -8,25 +8,25 @@ It keeps track of the last index to which data is written (-1 if the log is empt
 ```go
      import "github.com/cs733-iitb/log"
 
-     lg := log.Open("mylog")
+     lg, _ := log.Open("mylog")
      defer lg.Close()
 
      lg.Append([]byte("foo"))
      lg.Append([]byte("bar"))
      lg.Append([]byte("baz"))
 
-     bytes = log.Get(1) // should return "bar" in bytes
-     i := log.GetLastIndex() // should return 2 as an int64 value
+     bytes, _ := lg.Get(1) // should return "bar" in bytes
+     i := lg.GetLastIndex() // should return 2 as an int64 value
 
-     log.TruncateToEnd(/*from*/ 1)
-     i := log.GetLastIndex() // should return 0. One entry is left.
+     lg.TruncateToEnd(/*from*/ 1)
+     i = lg.GetLastIndex() // should return 0. One entry is left.
 
 ```
 
 # Installation and Dependencies.
 
     go get github.com/cs733-iit/log
-    go test -race github.com/cs733-iit/log
+    go test -race github.com/cs733-iitb/log
 
 This library depends on the github.com/syndtr/leveldb
 
