@@ -16,12 +16,12 @@ See the working sample in sample/sample.go.
 
 	lg, err := log.Open(LOGFILE)
 	lg.RegisterSampleEntry(Foo{})
+	assert (err == nil) 
 
-	defer rmlog()
-	assert (err == nil)
+	defer lg.Close()
 
 	err = lg.Append("foo")
-	assert (err == nil)
+	assert (err == nil) 
 
 	lg.Append("bar") 
 	res, err := lg.Get(1) // should return "bar"
