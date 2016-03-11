@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+type SubEntry struct {
+	Bar int
+	Baz string
+}
+
+type TestLogEntry struct {
+	Str string
+	Foo SubEntry
+}
+
 func TestMain(m *testing.M) {
 	cleanup()
 	m.Run()
@@ -17,16 +27,29 @@ func TestAppend(t *testing.T) {
 	append(t, 50)
 }
 
-// append 50 records of the form (i ->  "log item i = <i>")
+// Append 50 TestLogEntry instances
 func append(t *testing.T, start int) {
 	lg := mkLog(t)
+	lg.RegisterSampleEntry(TestLogEntry{})
+
 	defer lg.Close()
 
 	for i := start; i < start+50; i++ {
-		err := lg.Append([]byte(fmt.Sprintf("log item i = %d", i)))
+		e := mkSampleEntry(i)
+		err := lg.Append(e)
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func mkSampleEntry(i int) TestLogEntry {
+	return TestLogEntry{
+		Str: fmt.Sprintf("log item i = %d", i),
+		Foo: SubEntry{
+			Bar: i,
+			Baz: "baz",
+		},
 	}
 }
 
@@ -47,24 +70,44 @@ func checkGet(t *testing.T, lg *Log, i int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := fmt.Sprintf("log item i = %d", i)
-	if expected != string(data) {
-		t.Fatalf("Expected '%s', got '%s'", expected, string(data))
+
+	expected := mkSampleEntry(i)
+
+	got, ok := data.(TestLogEntry)
+	if !ok {
+		t.Fatalf("Expected a TestLogEntry, got: %v", data)
+	}
+	if expected != got {
+		t.Fatalf("Expected '%v', got '%v'", expected, got)
 	}
 }
 
 // Depends on TestAppend, which should have inserted 100 records
 func TestTruncate(t *testing.T) {
 	lg := mkLog(t)
-	err := lg.TruncateToEnd(50)
-	lg.Close()
-	if err != nil {
-		t.Fatal(err)
+
+	// visit some number of records to make sure they are in
+	// the LRU
+	for i := int64(20); i < 80; i++ {
+		lg.Get(i)
 	}
 
-	lg = mkLog(t)
-	checkIndex(t, lg, 49)
-	lg.Close()
+	err := lg.TruncateToEnd(70)
+
+	// In the first round, the LRU cache is warm. In the second round,
+	// the cache is cold, and ensures that the Get returns what's on disk
+	for rounds := 1; rounds <= 2; rounds++ {
+		checkIndex(t, lg, 69)
+		for i := int64(70); i < 100; i++ {
+			_, err = lg.Get(70)
+			if err == nil {
+				t.Fatal("Expected records to have been purged")
+			}
+		}
+
+		lg.Close()
+		lg = mkLog(t) // cold start
+	}
 }
 
 func checkIndex(t *testing.T, lg *Log, expected int) {
@@ -79,6 +122,7 @@ func mkLog(t *testing.T) *Log {
 	if err != nil {
 		t.Fatal(err)
 	}
+	lg.SetCacheSize(50) //
 	return lg
 }
 
