@@ -54,6 +54,16 @@ func (lg *Log) Append(data interface{}) error {
 	lg.setLastIndex(lg.lastIndex + 1)
 
 	tr, err := lg.ldb.OpenTransaction()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tr.Discard()
+		} else {
+			tr.Commit()
+		}
+	}()
 
 	lg.cache.Add(lg.lastIndex, data)
 
@@ -70,7 +80,6 @@ func (lg *Log) Append(data interface{}) error {
 	if err := tr.Put([]byte("lastIndex"), ibytes, nil); err != nil {
 		return err
 	}
-	err = tr.Commit()
 	return err
 }
 
