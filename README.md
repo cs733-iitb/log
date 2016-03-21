@@ -10,47 +10,33 @@ type must be registered as shown in the usage below.
 # Usage
 
 See the working sample in sample/sample.go.
-
+	
 ```go
      import "github.com/cs733-iitb/log"
+     lg, err := log.Open(LOGFILE)
+     lg.RegisterSampleEntry(Foo{})
+     assert (err == nil) 
 
-	lg, err := log.Open(LOGFILE)
-	lg.RegisterSampleEntry(Foo{})
-	assert (err == nil) 
-
-	defer lg.Close()
-
-	err = lg.Append("foo")
-	assert (err == nil) 
-
-	lg.Append("bar") 
-	res, err := lg.Get(1) // should return "bar"
-	assert(err == nil)
-	str, ok := res.(string)
-	assert(ok)
-	assert(str == "bar")
-
-	
-	err = lg.Append(Foo{Bar: 10, Baz:[]string{"x", "y"}})
-	assert(err == nil)
-
-	i := lg.GetLastIndex() // should return 2 as an int64 value
-	assert (i == 2)
-
-	data, err := lg.Get(i) // should return the Foo instance appended above
-	assert (err == nil)
-	foo, ok := data.(Foo) 
-	assert(ok)
-	assert(foo.Bar == 10 && foo.Baz[1] == "y")
-		
-	lg.TruncateToEnd(/*from*/ 1)
-	i = lg.GetLastIndex() // should return 0. One entry is left.
-	assert (i == 0)
-
-
-	// Set an LRU cache size ... entries in the LRU do not incur any serialization or disk cost.
-	lg.SetCacheSize(512) 
-
+     defer lg.Close()
+     
+     lg, _ := log.Open("mylog")
+     defer lg.Close()
+     
+     data, err := lg.Get(i) // should return the Foo instance appended above
+     assert (err == nil)
+     foo, ok := data.(Foo) 
+     assert(ok)
+     assert(foo.Bar == 10 && foo.Baz[1] == "y")
+     
+     lg.TruncateToEnd(/*from*/ 1)
+     i = lg.GetLastIndex() // should return 0. One entry is left.
+     assert (i == 0)
+     
+     bytes, _ := lg.Get(1) // should return "bar" in bytes
+     i := lg.GetLastIndex() // should return 2 as an int64 value
+     
+     lg.TruncateToEnd(/*from*/ 1)
+     i = lg.GetLastIndex() // should return 0. One entry is left.
 ```
 
 # Installation and Dependencies.
